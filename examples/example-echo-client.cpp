@@ -31,13 +31,13 @@ main()
 		mn_assert_msg(write_bytes == line.count, "socket_write failed");
 
 		mn::str_resize(line, 1024);
-		auto [read_bytes_count, err] = socket_read(socket, mn::block_from(line), mn::INFINITE_TIMEOUT);
-		if (err)
+		auto read_bytes_count = socket_read(socket, mn::block_from(line), mn::INFINITE_TIMEOUT);
+		if (read_bytes_count.has_error())
 		{
 			mn::print("socket_read error");
 			break;
 		}
-		read_bytes = read_bytes_count;
+		read_bytes = read_bytes_count.has_value();
 		mn_assert(read_bytes == write_bytes);
 
 		mn::str_resize(line, read_bytes);

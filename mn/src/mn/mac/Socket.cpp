@@ -76,8 +76,10 @@ namespace mn
 	size_t
 	ISocket::read(Block data)
 	{
-		auto [read_bytes, _] = socket_read(this, data, INFINITE_TIMEOUT);
-		return read_bytes;
+		auto result = socket_read(this, data, INFINITE_TIMEOUT);
+		if (result.has_value())
+			return result.value();
+		return 0;
 	}
 
 	size_t

@@ -60,28 +60,34 @@ namespace mn
 	template<typename T, typename E = Err>
 	struct Result
 	{
+		enum STATE
+		{
+			STATE_EMPTY = 0,
+			STATE_ERROR = 1,
+			STATE_VALUE = 2,
+		};
+
 		static_assert(!std::is_same_v<Err, T>, "Error can't be of the same type as value");
 
-		T val;
-		E err;
+		inline static constexpr size_t size = sizeof(T) > sizeof(E) ? sizeof(T) : sizeof(E);
+		inline static constexpr size_t alignment = alignof(T) > alignof(E) ? alignof(T) : alignof(E);
+		alignas(alignment) char _buffer[size];
+		STATE state;
 
 		// creates a result instance from an error
 		Result(E e)
-			:err(e)
-		{}
+		{
+			::new (_buffer) E(e);
+			state = STATE_ERROR;
+		}
 
 		// creates a result instance from a value
 		template<typename... TArgs>
 		Result(TArgs&& ... args)
-			:val(std::forward<TArgs>(args)...),
-			 err(E{})
-		{}
-
-		template<typename... TArgs>
-		Result(E e, TArgs&& ... args)
-			:val(std::forward<TArgs>(args)...),
-			 err(e)
-		{}
+		{
+			::new (_buffer) T(std::forward<TArgs>(args)...);
+			state = STATE_VALUE;
+		}
 
 		Result(const Result&) = delete;
 
@@ -91,50 +97,39 @@ namespace mn
 
 		Result& operator=(Result&&) = default;
 
-		~Result() = default;
+		~Result()
+		{
+			if (state & STATE_ERROR)
+			{
+				auto err = (E*)_buffer;
+				err->~E();
+			}
+
+			if (state & STATE_VALUE)
+			{
+				auto val = (T*)_buffer;
+				val->~T();
+			}
+		};
+
+		bool has_error() const { return state & STATE_ERROR; }
+		bool has_value() const { return state & STATE_VALUE; }
+		const E& error() const
+		{
+			mn_assert(has_error());
+			return *(const E*)_buffer;
+		}
+		E& error()
+		{
+			mn_assert(has_error());
+			return *(E*)_buffer;
+		}
+		T& value()
+		{
+			mn_assert(has_value());
+			return *(T*)_buffer;
+		}
 	};
-
-	// template specialization for the Err type
-	template<typename T>
-	struct Result<T, Err>
-	{
-		static_assert(!std::is_same_v<Err, T>, "Error can't be of the same type as value");
-
-		T val;
-		Err err;
-
-		Result(Err e):err(e) { mn_assert(err.msg.count > 0); ::memset(&val, 0, sizeof(val));}
-
-		template<typename... TArgs>
-		Result(TArgs&& ... args)
-			:val(std::forward<TArgs>(args)...)
-		{}
-
-		Result(const Result&) = delete;
-
-		Result(Result&&) = default;
-
-		Result& operator=(const Result&) = delete;
-
-		Result& operator=(Result&&) = default;
-
-		~Result() = default;
-
-		explicit operator bool() const { return !bool(err); }
-		bool operator==(bool v) const { return !bool(err) == v; }
-		bool operator!=(bool v) const { return !operator==(v); }
-	};
-
-	// destruct overload for result
-	template<typename T, typename TErr>
-	inline static void
-	destruct(Result<T, TErr>& self)
-	{
-		// TODO: encode which value you're currently holding instead of assuming you either have error
-		// or value becaue you can have neither
-		if (self.err == false)
-			destruct(self.val);
-	}
 }
 
 namespace fmt

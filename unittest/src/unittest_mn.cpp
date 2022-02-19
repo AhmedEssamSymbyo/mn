@@ -758,9 +758,9 @@ TEST_CASE("Result default error")
 {
 	SUBCASE("no err")
 	{
-		auto [r, err] = my_div(4, 2);
-		CHECK(err == false);
-		CHECK(r == 2);
+		auto r = my_div(4, 2);
+		CHECK(r.has_error() == false);
+		CHECK(r.value() == 2);
 	}
 
 	SUBCASE("err")
@@ -774,15 +774,15 @@ TEST_CASE("Result error code")
 {
 	SUBCASE("no err")
 	{
-		auto [r, err] = my_div2(4, 2);
-		CHECK(err == Err_Code::OK);
-		CHECK(r == 2);
+		auto r = my_div2(4, 2);
+		CHECK(r.has_error() == false);
+		CHECK(r.value() == 2);
 	}
 
 	SUBCASE("err")
 	{
-		auto [r, err] = my_div2(4, 0);
-		CHECK(err == Err_Code::ZERO_DIV);
+		auto r = my_div2(4, 0);
+		CHECK(r.error() == Err_Code::ZERO_DIV);
 	}
 }
 
@@ -1141,10 +1141,10 @@ TEST_CASE("uuid parsing")
 		auto variant = uuid_variant(id);
 		auto version = uuid_version(id);
 		auto id_str = mn::str_tmpf("{}", id);
-		auto [id2, err] = mn::uuid_parse(id_str);
-		CHECK(err == false);
-		CHECK(id == id2);
-		auto id2_str = mn::str_tmpf("{}", id2);
+		auto id2 = mn::uuid_parse(id_str);
+		CHECK(id2.has_error() == false);
+		CHECK(id == id2.value());
+		auto id2_str = mn::str_tmpf("{}", id2.value());
 		CHECK(id2_str == id_str);
 	}
 
@@ -1192,9 +1192,9 @@ TEST_CASE("uuid parsing")
 
 	SUBCASE("Case 09")
 	{
-		auto [id, err] = mn::uuid_parse("00000000-0000-0000-0000-000000000000");
-		CHECK(err == false);
-		CHECK(id == mn::null_uuid);
+		auto id = mn::uuid_parse("00000000-0000-0000-0000-000000000000");
+		CHECK(id.has_error() == false);
+		CHECK(id.value() == mn::null_uuid);
 	}
 }
 
@@ -1229,20 +1229,20 @@ TEST_CASE("json support")
 		}
 	)""";
 
-	auto [v, err] = mn::json::parse(json);
-	CHECK(err == false);
-	auto v_str = mn::str_tmpf("{}", v);
+	auto v = mn::json::parse(json);
+	CHECK(v.has_error() == false);
+	auto v_str = mn::str_tmpf("{}", v.value());
 	auto expected = R"""({"name":"my name is \"mostafa\"", "x":null, "y":true, "z":false, "w":213.123, "a":[1, false], "subobject":{"name":"subobject"}})""";
 	CHECK(v_str == expected);
-	mn::json::value_free(v);
+	mn::json::value_free(v.value());
 }
 
 inline static mn::Regex
 compile(const char* str)
 {
-	auto [prog, err] = mn::regex_compile(str, mn::memory::tmp());
-	CHECK(!err);
-	return prog;
+	auto prog = mn::regex_compile(str, mn::memory::tmp());
+	CHECK(prog.has_error() == false);
+	return prog.value();
 }
 
 inline static bool
