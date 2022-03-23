@@ -760,6 +760,7 @@ namespace mn
 		if (self->r.count < self->limit)
 		{
 			ring_push_back(self->r, v);
+			cond_var_notify(self->read_cv);
 			return true;
 		}
 		return false;
@@ -794,7 +795,7 @@ namespace mn
 	chan_can_recv(Chan<T> self)
 	{
 		mutex_lock(self->mtx);
-			bool res = (self->r.count > 0) && (chan_closed(self) == false);
+		bool res = (self->r.count > 0) && (chan_closed(self) == false);
 		mutex_unlock(self->mtx);
 		return res;
 	}
@@ -821,6 +822,7 @@ namespace mn
 		{
 			T res = ring_front(self->r);
 			ring_pop_front(self->r);
+			cond_var_notify(self->write_cv);
 			return { res, true };
 		}
 		return { T{}, false };
