@@ -16,6 +16,9 @@
 
 #include <chrono>
 
+#define WINDOWS_TICK 10000000
+#define SECS_BEFORE_UNIX_EPOCH 11644473600LL
+
 namespace mn
 {
 	Str
@@ -286,7 +289,13 @@ namespace mn
 		if (res == FALSE)
 			return 0;
 
-		return (int64_t(data.ftLastWriteTime.dwHighDateTime) << 32) | int64_t(data.ftLastWriteTime.dwLowDateTime);
+		// windows ticks are in 100 nanoseconds
+		int64_t windows_ticks = (int64_t(data.ftLastWriteTime.dwHighDateTime) << 32) | int64_t(data.ftLastWriteTime.dwLowDateTime);
+		// convert windows ticks from 100 nanoseconds to seconds
+		windows_ticks = windows_ticks / WINDOWS_TICK;
+		// windows epoch starts 1601-01-01T00:00:00Z and It's 11644473600 seconds before the UNIX/Linux epoch (1970-01-01T00:00:00Z)
+		// convert to unixtime
+		return windows_ticks - SECS_BEFORE_UNIX_EPOCH;
 	}
 
 	//Tip
