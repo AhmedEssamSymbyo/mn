@@ -174,11 +174,13 @@ namespace mn
 
 	// returns the time of the last write to the given file
 	// if path is not correct it will return 0
+	// the returned time is the seconds since UNIX/Linux epoch
 	MN_EXPORT int64_t
 	file_last_write_time(const char* path);
 
 	// returns the time of the last write to the given file
 	// if path is not correct it will return 0
+	// the returned time is the seconds since UNIX/Linux epoch
 	inline static int64_t
 	file_last_write_time(const mn::Str& path)
 	{
